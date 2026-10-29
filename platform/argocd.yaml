@@ -1,0 +1,16 @@
+# Lean Argo CD: no Dex, no notifications, no ApplicationSets. The UI stays for screenshots.
+dex: {enabled: false}
+notifications: {enabled: false}
+applicationSet: {replicas: 0}
+configs:
+  params:
+    server.insecure: true
+controller:
+  resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 384Mi}}
+repoServer:
+  resources: {requests: {cpu: 20m, memory: 64Mi}, limits: {memory: 256Mi}}
+server:
+  service: {type: NodePort, nodePortHttp: 30443}
+  resources: {requests: {cpu: 20m, memory: 64Mi}, limits: {memory: 128Mi}}
+redis:
+  resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 64Mi}}

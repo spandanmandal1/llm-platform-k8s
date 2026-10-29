@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llama-server
+  namespace: argocd
+  annotations: {argocd.argoproj.io/sync-wave: "1"}
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+spec:
+  project: default
+  destination: {server: https://kubernetes.default.svc, namespace: llm}
+  source:
+    repoURL: https://github.com/spandanmandal1/llm-platform-k8s.git
+    targetRevision: main
+    path: charts/llama-server
+    helm:
+      valuesObject:
+        service: {type: NodePort, nodePort: 30080}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, SkipDryRunOnMissingResource=true]
+    retry: {limit: 10, backoff: {duration: 10s, factor: 2, maxDuration: 3m}}

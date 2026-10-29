@@ -1,0 +1,66 @@
+name: ci
+
+on:
+  push: {branches: [main]}
+  pull_request:
+
+permissions: {contents: read}
+
+env:
+  MODEL_URL: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+  MODEL_SHA256: 74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with: {version: v3.18.4}
+      - name: helm lint
+        run: helm lint charts/llama-server
+      - name: kubeconform (chart and Argo CD apps)
+        run: |
+          helm template t charts/llama-server -n llm > rendered.yaml
+          docker run --rm -v "$PWD:/w" -w /w ghcr.io/yannh/kubeconform:v0.7.0-alpine \
+            -strict -summary -ignore-missing-schemas rendered.yaml argocd/root.yaml argocd/apps
+      - name: dashboard is valid JSON
+        run: python3 -m json.tool dashboards/llm.json > /dev/null
+
+  smoke:
+    # A real cluster and a real model: proves the chart serves completions, not just that it renders.
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with: {version: v3.18.4}
+      - name: Cache model
+        id: model
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: model-${{ env.MODEL_SHA256 }}
+      - name: Download model
+        if: steps.model.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p models
+          curl -fsSL "$MODEL_URL" -o models/qwen2.5-0.5b-instruct-q4_k_m.gguf
+          echo "$MODEL_SHA256  models/qwen2.5-0.5b-instruct-q4_k_m.gguf" | sha256sum -c
+      - name: Create kind cluster
+        run: MODELS_DIR="$PWD/models" envsubst < kind/cluster.yaml | kind create cluster --config - --wait 120s
+      - name: Deploy llama-server (no autoscaling in CI)
+        run: |
+          helm install llama-server charts/llama-server -n llm --create-namespace \
+            --set autoscaling.enabled=false --set service.type=NodePort --set service.nodePort=30080 \
+            --set resources.requests.cpu=1 --wait --timeout 5m
+      - name: Chat completion
+        run: |
+          curl -fsS localhost:8080/v1/chat/completions -H 'Content-Type: application/json' \
+            -d '{"messages":[{"role":"user","content":"Reply with the single word OK."}],"max_tokens":8,"temperature":0}' \
+            | tee response.json | python3 -c "import json,sys; print(json.load(sys.stdin)['choices'][0]['message']['content'])"
+      - name: Metrics endpoint
+        run: curl -fsS localhost:8080/metrics | grep -E '^llamacpp:(requests_processing|requests_deferred)'
+      - name: Debug on failure
+        if: failure()
+        run: kubectl get pods -A; kubectl -n llm describe pods; kubectl -n llm logs deploy/llama-server --tail=50

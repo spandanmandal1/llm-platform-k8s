@@ -19,3 +19,7 @@ dashboardProviders:
     providers:
       - {name: default, folder: "", type: file, options: {path: /var/lib/grafana/dashboards/default}}
 resources: {requests: {cpu: 50m, memory: 100Mi}, limits: {memory: 250Mi}}
+dashboards:
+  default:
+    llm:
+      url: https://raw.githubusercontent.com/spandanmandal1/llm-platform-k8s/main/dashboards/llm.json
