@@ -34,7 +34,9 @@ flowchart LR
 - **GitOps:** an Argo CD app-of-apps installs KEDA first, then Prometheus and Grafana, then the model server.
 - **Works with [alert-triage-bot](https://gitlab.com/spandanmandal/alert-triage-bot):** the Service is
   `llama-server` in namespace `llm` on port 8080, that project's default LLM address, so the two connect with no
-  configuration.
+  configuration. Tested: alert-triage-bot's released image (`registry.gitlab.com/spandanmandal/alert-triage-bot:0.1.0`),
+  installed into this cluster with only `dryRun=true` set, received an alert, called
+  `http://llama-server.llm.svc:8080/v1` and posted its triage 14.9 s later.
 
 ## Results
 
