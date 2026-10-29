@@ -19,13 +19,30 @@ jobs:
         with: {version: v3.18.4}
       - name: helm lint
         run: helm lint charts/llama-server
-      - name: kubeconform (chart and Argo CD apps)
+      - name: kubeconform (chart, EKS values and Argo CD apps)
         run: |
           helm template t charts/llama-server -n llm > rendered.yaml
+          helm template t charts/llama-server -n llm -f charts/llama-server/values-eks.yaml > rendered-eks.yaml
           docker run --rm -v "$PWD:/w" -w /w ghcr.io/yannh/kubeconform:v0.7.0-alpine \
-            -strict -summary -ignore-missing-schemas rendered.yaml argocd/root.yaml argocd/apps
+            -strict -summary -ignore-missing-schemas rendered.yaml rendered-eks.yaml argocd/root.yaml argocd/apps
       - name: dashboard is valid JSON
         run: python3 -m json.tool dashboards/llm.json > /dev/null
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run: {working-directory: terraform}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.15.9}
+      - uses: terraform-linters/setup-tflint@v6
+        with: {tflint_version: v0.63.0}
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      - run: tflint --init && tflint --format compact
+        env: {GITHUB_TOKEN: "${{ github.token }}"}
 
   smoke:
     # A real cluster and a real model: proves the chart serves completions, not just that it renders.

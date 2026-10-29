@@ -83,9 +83,26 @@ make down
 
 `make manual` deploys the same stack with plain `helm install`, without Argo CD.
 
+## Cloud version (AWS EKS)
+
+[`terraform/`](terraform/) creates a VPC (2 AZs, one NAT gateway) and an EKS cluster with one managed node group
+of `c7i.2xlarge` nodes (8 vCPU: two 3-core replicas per node), using the `terraform-aws-modules` VPC and EKS
+modules. On EKS the model is downloaded by an init container instead of a host mount
+([`values-eks.yaml`](charts/llama-server/values-eks.yaml)), and the Service is an AWS load balancer.
+
+**Status:** CI runs `fmt`, `validate` and `tflint` on every push. It has **not been applied yet**, so there are
+no EKS measurements here.
+
+```bash
+cd terraform && terraform init && terraform apply
+$(terraform output -raw kubeconfig_command)
+helm install llama-server ../charts/llama-server -n llm --create-namespace -f ../charts/llama-server/values-eks.yaml
+terraform destroy   # the cluster costs money every hour it exists
+```
+
 ## CI
 
-GitHub Actions lints the chart and the Argo CD apps, then runs a **smoke test on a real kind cluster**: it
+GitHub Actions lints the chart (kind and EKS values), the Argo CD apps and the Terraform, then runs a **smoke test on a real kind cluster**: it
 downloads the model (cached), deploys the chart and checks that a chat completion and the metrics endpoint
 work.
 
@@ -107,4 +124,5 @@ platform/              values for Prometheus, Grafana, KEDA, Argo CD (sized for 
 dashboards/llm.json    Grafana dashboard
 loadtest/k6.js         ramping load test
 kind/cluster.yaml      single-node cluster, model mount, port mappings
+terraform/             VPC + EKS for the cloud version
 ```

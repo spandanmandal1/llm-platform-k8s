@@ -8,8 +8,12 @@ image:
   pullPolicy: IfNotPresent
 
 model:
-  # Path inside the node; kind mounts the host's model directory at /models.
+  # Where the model comes from:
+  #  - hostDir: a directory on the node (kind mounts the host's ~/models at /models)
+  #  - downloadUrl: if set, an init container downloads the file into an emptyDir instead (EKS)
   hostDir: /models
+  downloadUrl: ""
+  sha256: ""
   file: qwen2.5-0.5b-instruct-q4_k_m.gguf
   alias: qwen2.5-0.5b-instruct
 

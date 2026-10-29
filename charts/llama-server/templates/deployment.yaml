@@ -18,6 +18,24 @@ spec:
         prometheus.io/path: /metrics
     spec:
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.model.downloadUrl }}
+      initContainers:
+        - name: fetch-model
+          image: curlimages/curl:8.15.0
+          command: [sh, -c]
+          args:
+            - |
+              set -e
+              curl -fsSL "$URL" -o /models/{{ .Values.model.file }}
+              {{- if .Values.model.sha256 }}
+              echo "{{ .Values.model.sha256 }}  /models/{{ .Values.model.file }}" | sha256sum -c
+              {{- end }}
+          env:
+            - {name: URL, value: {{ .Values.model.downloadUrl | quote }}}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - {name: models, mountPath: /models}
+      {{- end }}
       containers:
         - name: llama-server
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -59,8 +77,12 @@ spec:
             - {name: tmp, mountPath: /tmp}
       volumes:
         - name: models
+          {{- if .Values.model.downloadUrl }}
+          emptyDir: {sizeLimit: 1Gi}
+          {{- else }}
           hostPath:
             path: {{ .Values.model.hostDir }}
             type: Directory
+          {{- end }}
         - name: tmp
           emptyDir: {}
