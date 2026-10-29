@@ -1,0 +1,15 @@
+# Single-node kind cluster. The model is mounted from the host (MODELS_DIR) so it is downloaded once
+# and never baked into an image. Ports: 30080 -> llama-server, 30300 -> Grafana, 30090 -> Prometheus.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: llm
+nodes:
+  - role: control-plane
+    extraMounts:
+      - hostPath: ${MODELS_DIR}
+        containerPath: /models
+        readOnly: true
+    extraPortMappings:
+      - {containerPort: 30080, hostPort: 8080}
+      - {containerPort: 30300, hostPort: 3000}
+      - {containerPort: 30090, hostPort: 9090}

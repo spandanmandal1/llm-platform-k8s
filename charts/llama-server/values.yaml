@@ -1,0 +1,51 @@
+# The Service is "llama-server" in the release namespace (llm), port 8080: the default llmBaseUrl of
+# alert-triage-bot, so the two connect with no configuration.
+fullnameOverride: llama-server
+
+image:
+  repository: ghcr.io/ggml-org/llama.cpp
+  tag: ""  # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+model:
+  # Path inside the node; kind mounts the host's model directory at /models.
+  hostDir: /models
+  file: qwen2.5-0.5b-instruct-q4_k_m.gguf
+  alias: qwen2.5-0.5b-instruct
+
+server:
+  # Each replica owns its own cores, so a second replica adds real throughput instead of
+  # competing for the same ones. threads should match resources.limits.cpu.
+  threads: 3
+  parallel: 2          # concurrent request slots per replica
+  ctxSize: 4096        # shared by the slots: 2048 tokens each
+
+resources:
+  requests: {cpu: "3", memory: 700Mi}
+  limits: {cpu: "3", memory: 1Gi}
+
+service:
+  type: ClusterIP
+  port: 8080
+  nodePort: null       # set (e.g. 30080) to reach it from the host on kind
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2       # bounded by laptop RAM; raise on a bigger node
+  prometheusAddress: http://prometheus-server.monitoring.svc
+  # Desired replicas = ceil(demand / threshold). Demand is requests being processed plus requests
+  # waiting for a slot, so threshold = server.parallel means "add a replica when the slots are full".
+  threshold: "2"
+  pollingInterval: 10
+  cooldownPeriod: 120
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  seccompProfile: {type: RuntimeDefault}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: {drop: [ALL]}

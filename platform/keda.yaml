@@ -1,0 +1,5 @@
+# Admission webhooks off to save memory; ScaledObjects are only applied from this repo.
+webhooks: {enabled: false}
+resources:
+  operator: {requests: {cpu: 20m, memory: 64Mi}, limits: {memory: 200Mi}}
+  metricServer: {requests: {cpu: 20m, memory: 64Mi}, limits: {memory: 150Mi}}

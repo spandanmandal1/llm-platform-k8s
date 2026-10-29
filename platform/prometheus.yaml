@@ -1,0 +1,21 @@
+# Plain Prometheus, sized for a laptop. kube-state-metrics stays on for the replica count panel.
+alertmanager: {enabled: false}
+prometheus-pushgateway: {enabled: false}
+prometheus-node-exporter: {enabled: false}
+kube-state-metrics:
+  enabled: true
+  resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 96Mi}}
+configmapReload:
+  prometheus: {enabled: false}
+server:
+  global:
+    scrape_interval: 5s
+    evaluation_interval: 5s
+  retention: 1d
+  persistentVolume: {enabled: false}
+  # lets k6 push its client-side latency into Prometheus (remote write)
+  extraFlags: [web.enable-lifecycle, web.enable-remote-write-receiver]
+  service:
+    type: NodePort
+    nodePort: 30090
+  resources: {requests: {cpu: 100m, memory: 200Mi}, limits: {memory: 450Mi}}

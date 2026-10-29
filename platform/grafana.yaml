@@ -1,0 +1,21 @@
+service:
+  type: NodePort
+  nodePort: 30300
+persistence: {enabled: false}
+testFramework: {enabled: false}
+grafana.ini:
+  auth.anonymous: {enabled: true, org_role: Admin}
+  auth: {disable_login_form: true}
+  analytics: {reporting_enabled: false, check_for_updates: false}
+  news: {news_feed_enabled: false}
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - {name: Prometheus, uid: prometheus, type: prometheus, url: "http://prometheus-server.monitoring.svc", isDefault: true}
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - {name: default, folder: "", type: file, options: {path: /var/lib/grafana/dashboards/default}}
+resources: {requests: {cpu: 50m, memory: 100Mi}, limits: {memory: 250Mi}}
