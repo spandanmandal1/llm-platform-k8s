@@ -5,6 +5,11 @@ applicationSet: {replicas: 0}
 configs:
   params:
     server.insecure: true
+  # Local kind cluster only: anyone on localhost can view, nobody can change anything without logging in.
+  cm:
+    users.anonymous.enabled: "true"
+  rbac:
+    policy.default: role:readonly
 controller:
   resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 384Mi}}
 repoServer:
