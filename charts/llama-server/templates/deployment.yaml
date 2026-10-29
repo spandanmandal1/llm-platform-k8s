@@ -22,14 +22,22 @@ spec:
         - name: llama-server
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # llama.cpp wants "--flag value" as two arguments; "--flag=value" is rejected
           args:
-            - --host=0.0.0.0
-            - --port=8080
-            - --model=/models/{{ .Values.model.file }}
-            - --alias={{ .Values.model.alias }}
-            - --threads={{ .Values.server.threads }}
-            - --parallel={{ .Values.server.parallel }}
-            - --ctx-size={{ .Values.server.ctxSize }}
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8080"
+            - --model
+            - /models/{{ .Values.model.file }}
+            - --alias
+            - {{ .Values.model.alias }}
+            - --threads
+            - {{ .Values.server.threads | quote }}
+            - --parallel
+            - {{ .Values.server.parallel | quote }}
+            - --ctx-size
+            - {{ .Values.server.ctxSize | quote }}
             - --metrics
           ports:
             - {name: http, containerPort: 8080}

@@ -10,6 +10,7 @@ configmapReload:
 server:
   global:
     scrape_interval: 5s
+    scrape_timeout: 4s
     evaluation_interval: 5s
   retention: 1d
   persistentVolume: {enabled: false}
